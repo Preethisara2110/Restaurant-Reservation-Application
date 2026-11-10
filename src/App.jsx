@@ -55,6 +55,8 @@ const promoImage =
 const appImage =
   'https://images.unsplash.com/photo-1512499617640-c74ae3a79d37?auto=format&fit=crop&w=600&q=85';
 
+/* ---------------- HELPERS ---------------- */
+
 function getName(restaurant) {
   return (
     restaurant?.name ||
@@ -65,9 +67,43 @@ function getName(restaurant) {
   );
 }
 
+function getAddress(restaurant) {
+  return (
+    restaurant?.address ||
+    restaurant?.Address ||
+    restaurant?.restaurantAddress ||
+    'Address not available'
+  );
+}
+
+function getCity(restaurant) {
+  return restaurant?.city || restaurant?.City || '';
+}
+
+function getState(restaurant) {
+  return restaurant?.state || restaurant?.State || '';
+}
+
+function getRating(restaurant) {
+  return (
+    restaurant?.rating ??
+    restaurant?.['Overall Rating'] ??
+    restaurant?.overallRating ??
+    'N/A'
+  );
+}
+
 function getListNames(data) {
-  return listFrom(data, ['states', 'cities', 'data', 'results']).map(
-    (item) => {
+  const values = listFrom(data, [
+    'states',
+    'cities',
+    'data',
+    'results',
+    'result'
+  ]);
+
+  return values
+    .map((item) => {
       if (typeof item === 'string') return item;
 
       return (
@@ -78,8 +114,17 @@ function getListNames(data) {
         item?.city_name ||
         ''
       );
-    }
-  ).filter(Boolean);
+    })
+    .filter(Boolean);
+}
+
+function readBookings() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('bookings') || '[]');
+    return normalizeBookings(saved);
+  } catch {
+    return [];
+  }
 }
 
 /* ---------------- HEADER ---------------- */
@@ -178,7 +223,10 @@ function Footer() {
           </p>
 
           <div className="email-row">
-            <input aria-label="Email address" placeholder="Enter your email address" />
+            <input
+              aria-label="Email address"
+              placeholder="Enter your email address"
+            />
             <button type="button">Send Link</button>
           </div>
 
@@ -262,12 +310,7 @@ function SearchBox({
   const [stateOpen, setStateOpen] = useState(false);
   const [cityOpen, setCityOpen] = useState(false);
 
-  const stateNames = [
-    ...new Set([
-      'Texas',
-      ...states
-    ])
-  ];
+  const stateNames = [...new Set(['Texas', ...states])];
 
   const cityNames = [
     ...new Set([
@@ -277,29 +320,28 @@ function SearchBox({
   ];
 
   return (
-    <form className="search-box" onSubmit={onSearch}>
+    <form
+      className="search-box"
+      onSubmit={(event) => {
+        event.preventDefault();
+        setStateOpen(false);
+        setCityOpen(false);
+        onSearch(event);
+      }}
+    >
       {/* STATE DROPDOWN */}
 
       <div
         className="select-field custom-select"
         id="state"
         onClick={() => {
-          setStateOpen(!stateOpen);
+          setStateOpen((previous) => !previous);
           setCityOpen(false);
         }}
       >
         <MapPin size={18} />
 
-        <button
-          type="button"
-          className="select-trigger"
-          aria-label="Select state"
-          onClick={(event) => {
-            event.stopPropagation();
-            setStateOpen(!stateOpen);
-            setCityOpen(false);
-          }}
-        >
+        <button type="button" className="select-trigger">
           {state || (loadingStates ? 'Loading states...' : 'Select State')}
           <ChevronDown size={16} />
         </button>
@@ -309,12 +351,12 @@ function SearchBox({
             {stateNames.map((name) => (
               <li
                 key={name}
-                role="option"
-                aria-selected={state === name}
                 onClick={(event) => {
                   event.stopPropagation();
+
                   setState(name);
                   setCity(name === 'Texas' ? 'Austin' : '');
+
                   setStateOpen(false);
                 }}
               >
@@ -333,7 +375,7 @@ function SearchBox({
         onClick={() => {
           if (!state) return;
 
-          setCityOpen(!cityOpen);
+          setCityOpen((previous) => !previous);
           setStateOpen(false);
         }}
       >
@@ -342,16 +384,7 @@ function SearchBox({
         <button
           type="button"
           className="select-trigger"
-          aria-label="Select city"
           disabled={!state}
-          onClick={(event) => {
-            event.stopPropagation();
-
-            if (!state) return;
-
-            setCityOpen(!cityOpen);
-            setStateOpen(false);
-          }}
         >
           {city || (loadingCities ? 'Loading cities...' : 'Select City')}
           <ChevronDown size={16} />
@@ -362,10 +395,9 @@ function SearchBox({
             {cityNames.map((name) => (
               <li
                 key={name}
-                role="option"
-                aria-selected={city === name}
                 onClick={(event) => {
                   event.stopPropagation();
+
                   setCity(name);
                   setCityOpen(false);
                 }}
@@ -450,11 +482,14 @@ function Home(props) {
 
             <div className="quick-categories">
               <span>Popular searches</span>
-              {['Fine Dining', 'Family Friendly', 'Cafe', 'Outdoor Seating'].map(
-                (item) => (
-                  <a key={item} href="#how">{item}</a>
-                )
-              )}
+              {[
+                'Fine Dining',
+                'Family Friendly',
+                'Cafe',
+                'Outdoor Seating'
+              ].map((item) => (
+                <a key={item} href="#how">{item}</a>
+              ))}
             </div>
           </div>
         </section>
@@ -534,8 +569,10 @@ function Home(props) {
               <SwiperSlide key={src}>
                 <article className="news-card">
                   <img src={src} alt="Food inspiration" />
+
                   <div>
                     <small>FOOD & LIFESTYLE · 0{index + 1}</small>
+
                     <h3>
                       {[
                         'The joy of sharing a great meal',
@@ -543,7 +580,10 @@ function Home(props) {
                         'Discover flavors around the corner'
                       ][index]}
                     </h3>
-                    <a href="#locations">Read article <ArrowRight size={13} /></a>
+
+                    <a href="#locations">
+                      Read article <ArrowRight size={13} />
+                    </a>
                   </div>
                 </article>
               </SwiperSlide>
@@ -554,11 +594,17 @@ function Home(props) {
         <section className="booking-promo">
           <div>
             <span className="eyebrow">YOUR TABLE IS WAITING</span>
-            <h2>Make time for<br /><span>something delicious.</span></h2>
+
+            <h2>
+              Make time for<br />
+              <span>something delicious.</span>
+            </h2>
+
             <p>
               Book your table in a few simple steps and enjoy more of what
               matters — good food and good company.
             </p>
+
             <a className="primary-btn" href="#locations">
               Book a Table <ArrowRight size={16} />
             </a>
@@ -571,7 +617,10 @@ function Home(props) {
         </section>
 
         <section className="faq-section" id="faq">
-          <SectionTitle tag="NEED A HAND?" title="Frequently Asked Questions" />
+          <SectionTitle
+            tag="NEED A HAND?"
+            title="Frequently Asked Questions"
+          />
 
           <div className="faq-grid">
             <img
@@ -581,13 +630,28 @@ function Home(props) {
 
             <div>
               {[
-                ['How does TableEase work?', 'Choose your state and city, browse restaurants, select a date and time, and confirm your booking.'],
-                ['Can I book in advance?', 'Yes. Reservations can be made for dates within the next seven days.'],
-                ['Where can I view my reservations?', 'Open My Bookings in the navigation to see your saved reservations.'],
-                ['Can I cancel a reservation?', 'You can remove a saved booking from your My Bookings page.']
+                [
+                  'How does TableEase work?',
+                  'Choose your state and city, browse restaurants, select a date and time, and confirm your booking.'
+                ],
+                [
+                  'Can I book in advance?',
+                  'Yes. Reservations can be made for dates within the next seven days.'
+                ],
+                [
+                  'Where can I view my reservations?',
+                  'Open My Bookings in the navigation to see your saved reservations.'
+                ],
+                [
+                  'Can I cancel a reservation?',
+                  'You can remove a saved booking from your My Bookings page.'
+                ]
               ].map(([question, answer]) => (
                 <details key={question}>
-                  <summary>{question}<ChevronDown size={17} /></summary>
+                  <summary>
+                    {question}
+                    <ChevronDown size={17} />
+                  </summary>
                   <p>{answer}</p>
                 </details>
               ))}
@@ -605,8 +669,10 @@ function Home(props) {
 
 function RestaurantCard({ restaurant, index, onBook }) {
   const name = getName(restaurant);
-
-  const address = restaurant.address || 'Address not available';
+  const address = getAddress(restaurant);
+  const rating = getRating(restaurant);
+  const cityName = getCity(restaurant);
+  const stateName = getState(restaurant);
 
   return (
     <article className="restaurant-card">
@@ -615,6 +681,7 @@ function RestaurantCard({ restaurant, index, onBook }) {
           src={restaurant.image || foodImages[index % foodImages.length]}
           alt={name}
         />
+
         <span className="open-label">Available</span>
       </div>
 
@@ -632,12 +699,12 @@ function RestaurantCard({ restaurant, index, onBook }) {
 
         <p>
           <MapPin size={14} />
-          {[restaurant.city, restaurant.state].filter(Boolean).join(', ')}
+          {[cityName, stateName].filter(Boolean).join(', ')}
         </p>
 
         <span className="rating">
           <Star size={14} fill="currentColor" />
-          {restaurant.rating} Overall Rating
+          {rating} Overall Rating
         </span>
       </div>
 
@@ -686,17 +753,15 @@ function SearchResults({
 
         <div className="results-search">
           <SearchBox
-            {...{
-              states,
-              cities,
-              state,
-              city,
-              setState,
-              setCity,
-              onSearch,
-              loadingStates,
-              loadingCities
-            }}
+            states={states}
+            cities={cities}
+            state={state}
+            city={city}
+            setState={setState}
+            setCity={setCity}
+            onSearch={onSearch}
+            loadingStates={loadingStates}
+            loadingCities={loadingCities}
           />
         </div>
 
@@ -713,7 +778,12 @@ function SearchResults({
           <div className="empty-state">
             <h3>We couldn't load restaurants</h3>
             <p>{error}</p>
-            <button className="primary-btn" onClick={onSearch}>
+
+            <button
+              className="primary-btn"
+              type="button"
+              onClick={onSearch}
+            >
               Try Again
             </button>
           </div>
@@ -722,6 +792,7 @@ function SearchResults({
             <div className="results-heading">
               <div>
                 <span className="eyebrow">YOUR NEXT MEAL STARTS HERE</span>
+
                 <h1>
                   {restaurants.length} restaurants available in {city}
                 </h1>
@@ -736,7 +807,11 @@ function SearchResults({
               <div className="restaurant-list">
                 {restaurants.map((restaurant, index) => (
                   <RestaurantCard
-                    key={restaurant.id ?? index}
+                    key={
+                      restaurant.id ||
+                      restaurant._id ||
+                      `${getName(restaurant)}-${index}`
+                    }
                     restaurant={restaurant}
                     index={index}
                     onBook={onBook}
@@ -747,7 +822,9 @@ function SearchResults({
               <div className="empty-state">
                 <Utensils size={32} />
                 <h3>No restaurants found</h3>
-                <p>Try another city or check back in a little while.</p>
+                <p>
+                  Try another city or check back in a little while.
+                </p>
               </div>
             )}
           </>
@@ -768,13 +845,25 @@ function BookingPage({ bookingRestaurant, onConfirm }) {
   const [time, setTime] = useState('');
   const [guests, setGuests] = useState('2');
 
+  const storedRestaurant = (() => {
+    try {
+      return JSON.parse(sessionStorage.getItem('selectedRestaurant') || 'null');
+    } catch {
+      return null;
+    }
+  })();
+
   const restaurant =
-    bookingRestaurant?.restaurant || {
+    bookingRestaurant?.restaurant ||
+    storedRestaurant || {
       name: decodeURIComponent(id || 'Restaurant'),
       address: '',
       city: '',
       state: ''
     };
+
+  const restaurantImage =
+    bookingRestaurant?.image || foodImages[2];
 
   const dates = Array.from({ length: 7 }, (_, index) => {
     const current = new Date();
@@ -784,9 +873,18 @@ function BookingPage({ bookingRestaurant, onConfirm }) {
   });
 
   const slots = [
-    { label: 'Morning', times: ['10:00 AM', '11:00 AM'] },
-    { label: 'Afternoon', times: ['12:00 PM', '01:00 PM', '02:00 PM'] },
-    { label: 'Evening', times: ['05:00 PM', '06:00 PM', '07:00 PM', '08:00 PM'] }
+    {
+      label: 'Morning',
+      times: ['10:00 AM', '11:00 AM']
+    },
+    {
+      label: 'Afternoon',
+      times: ['12:00 PM', '01:00 PM', '02:00 PM']
+    },
+    {
+      label: 'Evening',
+      times: ['05:00 PM', '06:00 PM', '07:00 PM', '08:00 PM']
+    }
   ];
 
   const displayName = getName(restaurant);
@@ -794,7 +892,11 @@ function BookingPage({ bookingRestaurant, onConfirm }) {
   return (
     <>
       <main className="inner-page booking-page">
-        <button className="back-link" onClick={() => window.history.back()}>
+        <button
+          className="back-link"
+          type="button"
+          onClick={() => window.history.back()}
+        >
           <ArrowLeft size={16} />
           Back to restaurants
         </button>
@@ -810,7 +912,10 @@ function BookingPage({ bookingRestaurant, onConfirm }) {
             </p>
 
             <div className="booking-panel">
-              <h2><CalendarDays /> Select a date</h2>
+              <h2>
+                <CalendarDays />
+                Select a date
+              </h2>
 
               <div className="date-grid">
                 {dates.map((day, index) => (
@@ -850,7 +955,10 @@ function BookingPage({ bookingRestaurant, onConfirm }) {
             </div>
 
             <div className="booking-panel">
-              <h2><Clock3 /> Select a time</h2>
+              <h2>
+                <Clock3 />
+                Select a time
+              </h2>
 
               {!date && (
                 <p className="hint">Please select a date first.</p>
@@ -882,7 +990,10 @@ function BookingPage({ bookingRestaurant, onConfirm }) {
             </div>
 
             <div className="booking-panel">
-              <h2><Users /> Number of guests</h2>
+              <h2>
+                <Users />
+                Number of guests
+              </h2>
 
               <select
                 className="guest-select"
@@ -899,10 +1010,7 @@ function BookingPage({ bookingRestaurant, onConfirm }) {
           </section>
 
           <aside className="booking-summary">
-            <img
-              src={bookingRestaurant?.image || foodImages[2]}
-              alt={displayName}
-            />
+            <img src={restaurantImage} alt={displayName} />
 
             <div className="summary-body">
               <span className="eyebrow">YOUR RESTAURANT</span>
@@ -911,7 +1019,7 @@ function BookingPage({ bookingRestaurant, onConfirm }) {
 
               <p>
                 <MapPin size={15} />
-                {restaurant.address || restaurant.city || ''}
+                {getAddress(restaurant)}
               </p>
 
               <div className="summary-line">
@@ -938,9 +1046,9 @@ function BookingPage({ bookingRestaurant, onConfirm }) {
                     id: Date.now(),
                     restaurant: displayName,
                     restaurantName: displayName,
-                    address: restaurant.address || '',
-                    city: restaurant.city || '',
-                    state: restaurant.state || '',
+                    address: getAddress(restaurant),
+                    city: getCity(restaurant),
+                    state: getState(restaurant),
                     date,
                     bookingDate: date,
                     time,
@@ -1003,8 +1111,11 @@ function MyBookings({ bookings, onDelete }) {
 
         {bookings.length > 0 ? (
           <div className="saved-bookings">
-            {bookings.map((booking) => (
-              <article className="saved-card" key={booking.id}>
+            {bookings.map((booking, index) => (
+              <article
+                className="saved-card"
+                key={booking.id ?? index}
+              >
                 <div className="saved-icon">
                   <Utensils />
                 </div>
@@ -1012,7 +1123,12 @@ function MyBookings({ bookings, onDelete }) {
                 <div className="saved-details">
                   <span className="eyebrow">TABLEEASE RESERVATION</span>
 
-                  <h3>{booking.restaurant}</h3>
+                  <h3>
+                    {booking.restaurantName ||
+                      booking.restaurant ||
+                      booking.name ||
+                      'Restaurant'}
+                  </h3>
 
                   <p>
                     <MapPin size={14} />
@@ -1020,18 +1136,23 @@ function MyBookings({ bookings, onDelete }) {
                       booking.address,
                       booking.city,
                       booking.state
-                    ].filter(Boolean).join(', ') || 'Location details unavailable'}
+                    ].filter(Boolean).join(', ') ||
+                      'Location details unavailable'}
                   </p>
 
                   <div className="saved-meta">
                     <span>
                       <CalendarDays size={14} />
-                      {booking.date || booking.bookingDate || 'Date unavailable'}
+                      {booking.date ||
+                        booking.bookingDate ||
+                        'Date unavailable'}
                     </span>
 
                     <span>
                       <Clock3 size={14} />
-                      {booking.time || booking.bookingTime || 'Time unavailable'}
+                      {booking.time ||
+                        booking.bookingTime ||
+                        'Time unavailable'}
                     </span>
 
                     <span>
@@ -1049,6 +1170,7 @@ function MyBookings({ bookings, onDelete }) {
 
                   <button
                     className="remove-btn"
+                    type="button"
                     onClick={() => onDelete(booking.id)}
                   >
                     <Trash2 size={14} />
@@ -1103,16 +1225,9 @@ export function App() {
 
   const [bookingRestaurant, setBookingRestaurant] = useState(null);
 
-  const [bookings, setBookings] = useState(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem('bookings') || '[]');
-      return normalizeBookings(saved);
-    } catch {
-      return [];
-    }
-  });
+  const [bookings, setBookings] = useState(readBookings);
 
-  /* Load states */
+  /* LOAD STATES */
 
   useEffect(() => {
     let active = true;
@@ -1122,7 +1237,8 @@ export function App() {
         if (!active) return;
 
         const names = getListNames(data);
-        setStates(names.length ? names : ['Texas']);
+
+        setStates([...new Set(['Texas', ...names])]);
       })
       .catch(() => {
         if (active) setStates(['Texas']);
@@ -1136,7 +1252,7 @@ export function App() {
     };
   }, []);
 
-  /* Load cities when state changes */
+  /* LOAD CITIES */
 
   useEffect(() => {
     let active = true;
@@ -1144,11 +1260,16 @@ export function App() {
     if (!state) {
       setCities([]);
       setCity('');
-      return;
+      setLoadingCities(false);
+
+      return () => {
+        active = false;
+      };
     }
 
-    // Keep Austin available immediately for the assessment's default location.
     const fallbackCities = state === 'Texas' ? ['Austin'] : [];
+
+    // Make Austin immediately selectable for the assessment.
     setCities(fallbackCities);
 
     if (state === 'Texas' && !city) {
@@ -1162,7 +1283,13 @@ export function App() {
         if (!active) return;
 
         const names = getListNames(data);
-        const available = names.length ? names : fallbackCities;
+
+        const available = [
+          ...new Set([
+            ...fallbackCities,
+            ...names
+          ])
+        ];
 
         setCities(available);
 
@@ -1171,12 +1298,12 @@ export function App() {
         }
       })
       .catch(() => {
-        if (active) {
-          setCities(fallbackCities);
+        if (!active) return;
 
-          if (fallbackCities.length) {
-            setCity(fallbackCities[0]);
-          }
+        setCities(fallbackCities);
+
+        if (fallbackCities.length) {
+          setCity(fallbackCities[0]);
         }
       })
       .finally(() => {
@@ -1188,13 +1315,13 @@ export function App() {
     };
   }, [state]);
 
-  /* Save bookings */
+  /* SAVE BOOKINGS */
 
   useEffect(() => {
     localStorage.setItem('bookings', JSON.stringify(bookings));
   }, [bookings]);
 
-  /* Search restaurants */
+  /* SEARCH RESTAURANTS */
 
   const search = async (event) => {
     event?.preventDefault?.();
@@ -1212,10 +1339,13 @@ export function App() {
 
     try {
       const data = await getRestaurants(state, city);
+
       const items = restaurantList(data);
 
       setRestaurants(items);
     } catch (err) {
+      console.error('Restaurant search failed:', err);
+
       setError(
         'Unable to load restaurants. The service may be starting up. Please try again.'
       );
@@ -1224,33 +1354,44 @@ export function App() {
     }
   };
 
-  /* Open booking page */
+  /* OPEN BOOKING PAGE */
 
   const book = (restaurant, index) => {
-    setBookingRestaurant({
+    const selected = {
       restaurant,
       image: restaurant.image || foodImages[index % foodImages.length]
-    });
+    };
+
+    setBookingRestaurant(selected);
+
+    // Preserve selected restaurant if booking page is refreshed.
+    sessionStorage.setItem(
+      'selectedRestaurant',
+      JSON.stringify(restaurant)
+    );
 
     navigate(`/booking/${encodeURIComponent(getName(restaurant))}`);
   };
 
-  /* Confirm reservation */
+  /* CONFIRM RESERVATION */
 
   const confirm = (booking) => {
     const next = [booking, ...bookings];
 
     localStorage.setItem('bookings', JSON.stringify(next));
+
     setBookings(next);
 
     navigate('/my-bookings');
   };
 
-  /* Remove reservation */
+  /* DELETE RESERVATION */
 
   const remove = (id) => {
     setBookings((previous) => {
-      const next = previous.filter((booking) => booking.id !== id);
+      const next = previous.filter(
+        (booking) => booking.id !== id
+      );
 
       localStorage.setItem('bookings', JSON.stringify(next));
 
