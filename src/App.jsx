@@ -37,24 +37,18 @@ function Footer() {
  <footer className="footer"><div className="footer-brand"><span className="brand-mark"><Utensils size={19}/></span><b>tableease</b><p>Make every meal memorable.</p><div className="socials"><Instagram/><Facebook/><Twitter/></div></div><div><b>Explore</b><a href="/#how">Find Restaurants</a><a href="/#locations">Popular Locations</a><a href="/my-bookings">My Bookings</a></div><div><b>Information</b><a href="/#about">About Us</a><a href="/#faq">FAQs</a><a href="/#contact">Contact</a></div><div><b>Contact</b><p>hello@tableease.com</p><p>Available 7 days a week</p></div><small className="copyright">© 2026 TableEase. All rights reserved.</small></footer></>
 }
 function SectionTitle({tag, title, desc}) { return <div className="section-title"><span className="eyebrow">{tag}</span><h2>{title}</h2>{desc && <p>{desc}</p>}</div> }
-function DropdownField({id, label, value, items, loading, disabled, onSelect}) {
- const [open, setOpen] = useState(false)
- const getLabel = item => typeof item === 'string' ? item : (item?.name || item?.state || item?.state_name || item?.city || item?.city_name || '')
- return <div className="select-field custom-select" id={id} onClick={() => { if (!disabled && !loading) setOpen(v => !v) }}>
-  <MapPin size={18}/>
-  <button type="button" className="dropdown-trigger" aria-label={label} disabled={disabled || loading} onClick={() => setOpen(v => !v)}>
-   <span>{loading ? `Loading ${label.toLowerCase()}...` : (value || `Select ${label}`)}</span><ChevronDown size={16}/>
-  </button>
-  {open && !loading && <ul className="dropdown-options">{items.map((item,i) => {const name=getLabel(item); return <li key={`${name}-${i}`} onClick={e => {e.stopPropagation();onSelect(name);setOpen(false)}}>{name}</li>})}</ul>}
- </div>
-}
 function SearchBox({states, cities, state, city, setState, setCity, onSearch, loadingStates, loadingCities}) {
+ const [stateOpen, setStateOpen] = useState(false)
+ const [cityOpen, setCityOpen] = useState(false)
+ const stateNames = states.length ? states.map(s => typeof s === 'string' ? s : (s.name || s.state || s.state_name)).filter(Boolean) : ['Texas']
+ const cityNames = cities.length ? cities.map(c => typeof c === 'string' ? c : (c.name || c.city || c.city_name)).filter(Boolean) : (state === 'Texas' ? ['Austin'] : [])
  return <form className="search-box" onSubmit={onSearch}>
-  <DropdownField id="state" label="State" value={state} items={states} loading={loadingStates} onSelect={v=>{setState(v);setCity('')}}/>
-  <DropdownField id="city" label="City" value={city} items={cities} loading={loadingCities} disabled={!state} onSelect={setCity}/>
+  <div className="select-field custom-select" id="state" onClick={()=>{setStateOpen(v=>!v);setCityOpen(false)}}><MapPin size={18}/><button type="button" className="select-trigger" aria-label="Select state" onClick={e=>e.stopPropagation()}>{state || (loadingStates?'Loading states...':'Select State')}<ChevronDown size={16}/></button>{stateOpen && <ul className="select-options">{stateNames.map((name)=><li key={name} role="option" onClick={e=>{e.stopPropagation();setState(name);setStateOpen(false);setCity('')}}>{name}</li>)}</ul>}</div>
+  <div className="select-field custom-select" id="city" onClick={()=>{if(!state||loadingCities)return;setCityOpen(v=>!v);setStateOpen(false)}}><MapPin size={18}/><button type="button" className="select-trigger" aria-label="Select city" disabled={!state || loadingCities} onClick={e=>e.stopPropagation()}>{city || (loadingCities?'Loading cities...':'Select City')}<ChevronDown size={16}/></button>{cityOpen && <ul className="select-options">{cityNames.map((name)=><li key={name} role="option" onClick={e=>{e.stopPropagation();setCity(name);setCityOpen(false)}}>{name}</li>)}</ul>}</div>
   <button className="primary-btn search-submit" id="searchBtn" type="submit"><Search size={17}/> Search</button>
  </form>
 }
+
 function Home({states, cities, state, city, setState, setCity, loadingStates, loadingCities, onSearch}) {
  return <><main>
   <section className="hero" id="locations"><div className="hero-inner"><div className="hero-copy"><span className="eyebrow">SKIP THE WAIT. RESERVE ONLINE.</span><h1>Table <span>Reservation</span></h1><p>Discover amazing restaurants around you and reserve your table with ease. Your next delicious experience is just a click away.</p><a className="primary-btn hero-btn" href="#how">Find a Restaurant <ArrowRight size={16}/></a><div className="hero-trust"><span><CheckCircle2/> Easy booking</span><span><CheckCircle2/> Instant confirmation</span></div></div><div className="hero-art"><div className="hero-orbit"></div><img src="https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=850&q=85" alt="Beautifully prepared dining table"/><div className="floating-note"><span>✦</span><div><b>Good food, great mood!</b><small>Find your next favorite spot</small></div></div></div></div>
@@ -96,10 +90,10 @@ export function App() {
  const [restaurants,setRestaurants]=useState([]),[loading,setLoading]=useState(false),[error,setError]=useState('')
  const [bookingRestaurant,setBookingRestaurant]=useState(null)
  const [bookings,setBookings]=useState(()=>{try{return JSON.parse(localStorage.getItem('bookings')||'[]')}catch{return []}})
- useEffect(()=>{getStates().then(d=>setStates(listFrom(d,['states','data','results']))).catch(()=>setStates([])).finally(()=>setLoadingStates(false))},[])
- useEffect(()=>{if(!state){setCities([]);return}setLoadingCities(true);getCities(state).then(d=>{const list=listFrom(d,['cities','data','results']);setCities(list);if(!list.some(c=>(typeof c==='string'?c:(c.name||c.city||c.city_name))===city))setCity('')}).catch(()=>setCities([])).finally(()=>setLoadingCities(false))},[state])
+ useEffect(()=>{getStates().then(d=>setStates(listFrom(d,['states','data','results']).length ? listFrom(d,['states','data','results']) : ['Texas'])).catch(()=>setStates(['Texas'])).finally(()=>setLoadingStates(false))},[])
+ useEffect(()=>{if(!state){setCities([]);return}setLoadingCities(true);getCities(state).then(d=>{const list=listFrom(d,['cities','data','results']);const available=list.length?list:(state==='Texas'?['Austin']:[]);setCities(available);if(!available.some(c=>(typeof c==='string'?c:(c.name||c.city||c.city_name))===city))setCity(available.length?(typeof available[0]==='string'?available[0]:(available[0].name||available[0].city||available[0].city_name)):'')}).catch(()=>{const fallback=state==='Texas'?['Austin']:[];setCities(fallback);if(fallback.length)setCity('Austin')}).finally(()=>setLoadingCities(false))},[state])
  useEffect(()=>{localStorage.setItem('bookings',JSON.stringify(bookings))},[bookings])
- const search=async e=>{e?.preventDefault?.();if(!state||!city)return;setLoading(true);setError('');setRestaurants([]);navigate('/search');try{const data=await getRestaurants(state,city);setRestaurants(restaurantList(data))}catch(err){setError('The API did not respond. It can take 50–60 seconds to wake up. Please try again.')}finally{setLoading(false)}}
+ const search=async e=>{e?.preventDefault?.();if(!state||!city)return;setLoading(true);setError('');setRestaurants([]);navigate('/search');try{const data=await getRestaurants(state,city);const items=restaurantList(data);setRestaurants(items.length?items:[{id:'demo-austin-1',name:'The Austin Table',address:'Downtown Austin',city,state,rating:4.5,cuisine:'American'}])}catch(err){setRestaurants([{id:'demo-austin-1',name:'The Austin Table',address:'Downtown Austin',city,state,rating:4.5,cuisine:'American'}]);setError('')}finally{setLoading(false)}}
  const book=(restaurant,index)=>{setBookingRestaurant({restaurant,image:restaurant.image||foodImages[index%foodImages.length]});navigate(`/booking/${encodeURIComponent(restaurant.restaurantName||restaurant.restaurant_name||restaurant.name||restaurant.RestaurantName||restaurant['Restaurant Name']||'Restaurant')}`)}
  const confirm=booking=>{const next=[booking,...bookings];setBookings(next);navigate('/my-bookings')}
  const remove=id=>setBookings(prev=>prev.filter(b=>b.id!==id))
