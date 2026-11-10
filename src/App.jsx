@@ -37,10 +37,21 @@ function Footer() {
  <footer className="footer"><div className="footer-brand"><span className="brand-mark"><Utensils size={19}/></span><b>tableease</b><p>Make every meal memorable.</p><div className="socials"><Instagram/><Facebook/><Twitter/></div></div><div><b>Explore</b><a href="/#how">Find Restaurants</a><a href="/#locations">Popular Locations</a><a href="/my-bookings">My Bookings</a></div><div><b>Information</b><a href="/#about">About Us</a><a href="/#faq">FAQs</a><a href="/#contact">Contact</a></div><div><b>Contact</b><p>hello@tableease.com</p><p>Available 7 days a week</p></div><small className="copyright">© 2026 TableEase. All rights reserved.</small></footer></>
 }
 function SectionTitle({tag, title, desc}) { return <div className="section-title"><span className="eyebrow">{tag}</span><h2>{title}</h2>{desc && <p>{desc}</p>}</div> }
+function DropdownField({id, label, value, items, loading, disabled, onSelect}) {
+ const [open, setOpen] = useState(false)
+ const getLabel = item => typeof item === 'string' ? item : (item?.name || item?.state || item?.state_name || item?.city || item?.city_name || '')
+ return <div className="select-field custom-select" id={id} onClick={() => { if (!disabled && !loading) setOpen(v => !v) }}>
+  <MapPin size={18}/>
+  <button type="button" className="dropdown-trigger" aria-label={label} disabled={disabled || loading} onClick={() => setOpen(v => !v)}>
+   <span>{loading ? `Loading ${label.toLowerCase()}...` : (value || `Select ${label}`)}</span><ChevronDown size={16}/>
+  </button>
+  {open && !loading && <ul className="dropdown-options">{items.map((item,i) => {const name=getLabel(item); return <li key={`${name}-${i}`} onClick={e => {e.stopPropagation();onSelect(name);setOpen(false)}}>{name}</li>})}</ul>}
+ </div>
+}
 function SearchBox({states, cities, state, city, setState, setCity, onSearch, loadingStates, loadingCities}) {
  return <form className="search-box" onSubmit={onSearch}>
-  <div className="select-field" id="state"><MapPin size={18}/><select aria-label="Select state" value={state} onChange={e=>setState(e.target.value)} required><option value="">{loadingStates?'Loading states...':'Select State'}</option>{states.map((s,i)=><option key={i} value={typeof s==='string'?s:(s.name||s.state||s.state_name)}>{typeof s==='string'?s:(s.name||s.state||s.state_name)}</option>)}</select><ChevronDown size={16}/></div>
-  <div className="select-field" id="city"><MapPin size={18}/><select aria-label="Select city" value={city} onChange={e=>setCity(e.target.value)} required disabled={!state||loadingCities}><option value="">{loadingCities?'Loading cities...':'Select City'}</option>{cities.map((c,i)=><option key={i} value={typeof c==='string'?c:(c.name||c.city||c.city_name)}>{typeof c==='string'?c:(c.name||c.city||c.city_name)}</option>)}</select><ChevronDown size={16}/></div>
+  <DropdownField id="state" label="State" value={state} items={states} loading={loadingStates} onSelect={v=>{setState(v);setCity('')}}/>
+  <DropdownField id="city" label="City" value={city} items={cities} loading={loadingCities} disabled={!state} onSelect={setCity}/>
   <button className="primary-btn search-submit" id="searchBtn" type="submit"><Search size={17}/> Search</button>
  </form>
 }
@@ -60,7 +71,7 @@ function RestaurantCard({restaurant,index,onBook}) {
  const name=restaurant.restaurantName||restaurant.restaurant_name||restaurant.name||restaurant.RestaurantName||restaurant['Restaurant Name']||'Restaurant'
  const address=restaurant.address||restaurant.Address||restaurant['Restaurant Address']||'Address not available'
  const rating=restaurant.overallRating??restaurant.overall_rating??restaurant.rating??restaurant.Rating??restaurant['Overall Rating']
- return <article className="restaurant-card"><div className="restaurant-thumb"><img src={restaurant.image||foodImages[index%foodImages.length]} alt={name}/><span className="open-label">Available</span></div><div className="restaurant-info"><span className="eyebrow">RESTAURANT · {restaurant.cuisine||'LOCAL FAVORITE'}</span><h3>{name}</h3><p><MapPin size={14}/>{address}</p><p><MapPin size={14}/>{restaurant.city||restaurant.City||''}{(restaurant.state||restaurant.State)?`, ${restaurant.state||restaurant.State}`:''}</p>{rating!==undefined&&<span className="rating"><Star size={14} fill="currentColor"/>{rating} Overall Rating</span>}</div><div className="restaurant-action"><span className="free-tag">FREE RESERVATION</span><button className="primary-btn" onClick={()=>onBook(restaurant,index)}>Book FREE Reservation <ArrowRight size={15}/></button></div></article>
+ return <article className="restaurant-card"><div className="restaurant-thumb"><img src={restaurant.image||foodImages[index%foodImages.length]} alt={name}/><span className="open-label">Available</span></div><div className="restaurant-info"><span className="eyebrow">RESTAURANT · {restaurant.cuisine||'LOCAL FAVORITE'}</span><h3>{name}</h3><p><MapPin size={14}/>{address}</p><p><MapPin size={14}/>{restaurant.city||restaurant.City||''}{(restaurant.state||restaurant.State)?`, ${restaurant.state||restaurant.State}`:''}</p>{rating!==undefined&&<span className="rating"><Star size={14} fill="currentColor"/>{rating} Overall Rating</span>}</div><div className="restaurant-action"><span className="free-tag">FREE RESERVATION</span><button type="button" className="primary-btn mobile-toggle" onClick={()=>onBook(restaurant,index)}>Book FREE Reservation <ArrowRight size={15}/></button></div></article>
 }
 function SearchResults({states,cities,state,city,setState,setCity,loadingStates,loadingCities,onSearch,restaurants,loading,error,onBook}) {
  return <><main className="inner-page"><div className="page-heading"><span className="eyebrow">FIND YOUR TABLE</span><h1>Explore Restaurants</h1><p>Discover a place you'll love and reserve your table.</p></div><div className="results-search"><SearchBox {...{states,cities,state,city,setState,setCity,onSearch,loadingStates,loadingCities}}/></div>
